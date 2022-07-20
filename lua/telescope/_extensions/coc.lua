@@ -242,8 +242,8 @@ local function list_or_jump(opts)
 
   if vim.tbl_isempty(defs) then
     print(('No %s found'):format(opts.coc_action))
-  elseif #defs == 1 then
-    CocActionAsync('runCommand', 'workspace.openLocation', nil, defs[1])
+  -- elseif #defs == 1 then
+  --   CocActionAsync('runCommand', 'workspace.openLocation', nil, defs[1])
   else
     local results = locations_to_items(defs)
     if not results then
