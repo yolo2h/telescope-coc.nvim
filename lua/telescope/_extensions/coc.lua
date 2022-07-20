@@ -14,10 +14,13 @@ local vim = vim
 ---@diagnostic disable-next-line: undefined-global
 local jit = jit
 
+local F = vim.F
 local fn = vim.fn
 local api = vim.api
 local CocAction = fn.CocAction
 local CocActionAsync = fn.CocActionAsync
+
+local config = {}
 
 local function is_ready(feature)
   if vim.g.coc_service_initialized ~= 1 then
@@ -61,6 +64,9 @@ local locations_to_items = function(locs)
 end
 
 local mru = function(opts)
+  if config.theme then
+    opts = vim.tbl_deep_extend("force", opts or {}, config.theme)
+  end
   if not is_ready() then
     return
   end
@@ -111,6 +117,9 @@ local mru = function(opts)
 end
 
 local links = function(opts)
+  if config.theme then
+    opts = vim.tbl_deep_extend("force", opts or {}, config.theme)
+  end
   if not is_ready('documentLink') then
     return
   end
@@ -157,6 +166,9 @@ local links = function(opts)
 end
 
 local handle_code_actions = function(opts, mode)
+  if config.theme then
+    opts = vim.tbl_deep_extend("force", opts or {}, config.theme)
+  end
   if not is_ready('codeAction') then
     return
   end
@@ -216,6 +228,9 @@ local file_code_actions = function(opts)
 end
 
 local function list_or_jump(opts)
+  if config.theme then
+    opts = vim.tbl_deep_extend("force", opts or {}, config.theme)
+  end
   if not is_ready(opts.coc_provider) then
     return
   end
@@ -275,6 +290,9 @@ local type_definitions = function(opts)
 end
 
 local references = function(opts)
+  if config.theme then
+    opts = vim.tbl_deep_extend("force", opts or {}, config.theme)
+  end
   if not is_ready('reference') then
     return
   end
@@ -340,6 +358,9 @@ local references_used = function(opts)
 end
 
 local locations = function(opts)
+  if config.theme then
+    opts = vim.tbl_deep_extend("force", opts or {}, config.theme)
+  end
   local refs = vim.g.coc_jump_locations
   local results = locations_to_items(refs)
   if not results then
@@ -357,6 +378,9 @@ local locations = function(opts)
 end
 
 local document_symbols = function(opts)
+  if config.theme then
+    opts = vim.tbl_deep_extend("force", opts or {}, config.theme)
+  end
   if not is_ready('documentSymbol') then
     return
   end
@@ -416,6 +440,9 @@ local function get_workspace_symbols_requester()
 end
 
 local workspace_symbols = function(opts)
+  if config.theme then
+    opts = vim.tbl_deep_extend("force", opts or {}, config.theme)
+  end
   pickers.new(opts, {
     prompt_title = 'Coc Workspace Symbols',
     finder = finders.new_dynamic({
@@ -428,12 +455,15 @@ local workspace_symbols = function(opts)
 end
 
 local diagnostics = function(opts)
+  if config.theme then
+    opts = vim.tbl_deep_extend("force", opts or {}, config.theme)
+  end
   if not is_ready() then
     return
   end
 
-  local diagnostics = CocAction('diagnosticList')
-  if type(diagnostics) ~= 'table' or vim.tbl_isempty(diagnostics) then
+  local diagnosticsList = CocAction('diagnosticList')
+  if type(diagnosticsList) ~= 'table' or vim.tbl_isempty(diagnosticsList) then
     return
   end
 
@@ -448,7 +478,7 @@ local diagnostics = function(opts)
       buf_names[api.nvim_buf_get_name(bn)] = bn
     end
   end
-  for _, d in ipairs(diagnostics) do
+  for _, d in ipairs(diagnosticsList) do
     if d.severity == 'Information' then
       d.severity = 'Info'
     elseif d.severity == 'Warning' then
@@ -468,7 +498,7 @@ local diagnostics = function(opts)
     end
   end
 
-  opts.path_display = utils.get_default(opts.path_display, 'hidden')
+  opts.path_display = F.if_nil(opts.path_display, 'hidden')
   pickers.new(opts, {
     prompt_title = 'Coc Diagnostics',
     previewer = conf.qflist_previewer(opts),
@@ -484,14 +514,17 @@ local diagnostics = function(opts)
 end
 
 local workspace_diagnostics = function(opts)
-  opts = utils.get_default(opts, {})
-  opts.path_display = utils.get_default(opts.path_display, 'shorten')
+  opts = F.if_nil(opts, {})
+  opts.path_display = F.if_nil(opts.path_display, 'shorten')
   opts.prompt_title = 'Coc Workspace Diagnostics'
   opts.get_all = true
   diagnostics(opts)
 end
 
 local commands = function(opts)
+  if config.theme then
+    opts = vim.tbl_deep_extend("force", opts or {}, config.theme)
+  end
   if not is_ready() then
     return
   end
@@ -575,6 +608,9 @@ local commands = function(opts)
 end
 
 local function subcommands(opts)
+  if config.theme then
+    opts = vim.tbl_deep_extend("force", opts or {}, config.theme)
+  end
   local cmds = require('telescope.command').get_extensions_subcommand().coc
   cmds = vim.tbl_filter(function(v)
     return v ~= 'coc'
@@ -600,6 +636,11 @@ local function subcommands(opts)
 end
 
 return require('telescope').register_extension({
+  setup = function(ext_config)
+    if ext_config.theme then
+      config.theme = require('telescope.themes')['get_' .. ext_config.theme]()
+    end
+  end,
   exports = {
     coc = subcommands,
     mru = mru,
